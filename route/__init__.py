@@ -26,7 +26,7 @@ from flask import url_for
 from flask import render_template_string, abort
 from flask_caching import Cache
 from flask_session import Session
-
+# from flask_compress import Compress
 
 from whitenoise import WhiteNoise
 
@@ -41,6 +41,7 @@ common.init()
 
 app = Flask(__name__, template_folder='templates/default')
 app.config.version = config_api.config_api().getVersion()
+# Compress(app)
 
 app.wsgi_app = WhiteNoise(
     app.wsgi_app, root="route/static/", prefix="static/", max_age=604800)
@@ -59,8 +60,7 @@ try:
     sdb.create_all()
 except:
     app.config['SESSION_TYPE'] = 'filesystem'
-    app.config['SESSION_FILE_DIR'] = '/tmp/py_mw_session_' + \
-        str(sys.version_info[0])
+    app.config['SESSION_FILE_DIR'] = '/tmp/py_mw_session_' + str(sys.version_info[0])
     app.config['SESSION_FILE_THRESHOLD'] = 1024
     app.config['SESSION_FILE_MODE'] = 384
 
@@ -295,9 +295,6 @@ def code():
 
     out = io.BytesIO()
     codeImage[0].save(out, "png")
-
-    # print(codeImage[1])
-
     session['code'] = mw.md5(''.join(codeImage[1]).lower())
 
     img = Response(out.getvalue(), headers={'Content-Type': 'image/png'})
@@ -598,9 +595,6 @@ def index(reqClass=None, reqAction=None, reqData=None):
 
 
 ##################### ssh  start ###########################
-shell = None
-shell_client = None
-
 
 @socketio.on('webssh_websocketio')
 def webssh_websocketio(data):
@@ -608,35 +602,21 @@ def webssh_websocketio(data):
         emit('server_response', {'data': '会话丢失，请重新登陆面板!\r\n'})
         return
 
-    global shell_client
-    if not shell_client:
-        import ssh_terminal
-        shell_client = ssh_terminal.ssh_terminal()
-
+    import ssh_terminal
+    shell_client = ssh_terminal.ssh_terminal.instance()
     shell_client.run(request.sid, data)
     return
 
 
 @socketio.on('webssh')
-def webssh(msg):
-    global shell
+def webssh(data):
     if not isLogined():
         emit('server_response', {'data': '会话丢失，请重新登陆面板!\r\n'})
         return None
 
-    if not shell:
-        shell = mw.connectSsh()
-
-    if shell.exit_status_ready():
-        shell = mw.connectSsh()
-
-    if shell:
-        shell.send(msg)
-        try:
-            time.sleep(0.005)
-            recv = shell.recv(4096)
-            emit('server_response', {'data': recv.decode("utf-8")})
-        except Exception as ex:
-            emit('server_response', {'data': str(ex)})
+    import ssh_local
+    shell = ssh_local.ssh_local.instance()
+    shell.run(data)
+    return
 
 ##################### ssh  end ###########################

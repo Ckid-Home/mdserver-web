@@ -40,11 +40,11 @@ def getArgs():
 
     if args_len == 1:
         t = args[0].strip('{').strip('}')
-        t = t.split(':')
+        t = t.split(':', 1)
         tmp[t[0]] = t[1]
     elif args_len > 1:
         for i in range(len(args)):
-            t = args[i].split(':')
+            t = args[i].split(':', 1)
             tmp[t[0]] = t[1]
 
     return tmp
@@ -971,9 +971,14 @@ def setRetry():
     conf = getJsonPath('config')
     content = mw.readFile(conf)
     cobj = json.loads(content)
-
-    cobj['retry'] = args
-
+    
+    ## 修复数据类型错误
+    tmp = args
+    tmp['retry'] = int(tmp['retry'])
+    tmp['retry_time'] = int(tmp['retry_time'])
+    tmp['retry_cycle'] = int(tmp['retry_cycle'])
+    
+    cobj['retry'] = tmp
     cjson = mw.getJson(cobj)
     mw.writeFile(conf, cjson)
 

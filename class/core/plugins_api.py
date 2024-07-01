@@ -148,7 +148,7 @@ class plugins_api:
     def initApi(self):
 
         plugin_names = {
-            'openresty': '1.21.4.3',
+            'openresty': '1.25.3.1',
             'php': '56',
             'swap': '1.1',
             'mysql': '5.7',
@@ -1090,9 +1090,15 @@ class plugins_api:
         if not os.path.exists(package):
             return (False, "插件不存在!")
 
-        sys.path.append(package)
+        if not package in sys.path:
+            sys.path.append(package)
         eval_str = "__import__('" + script + "')." + func + '(' + args + ')'
-        newRet = eval(eval_str)
+        newRet = None
+        try:
+            newRet = eval(eval_str)
+        except Exception as e:
+            print(mw.getTracebackInfo())
+        
         if mw.isDebugMode():
             print('callback', eval_str)
 
